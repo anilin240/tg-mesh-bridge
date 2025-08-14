@@ -1,0 +1,14 @@
+[project]
+name = "tg-mesh-bridge"
+version = "0.1.0"
+description = "Telegram <-> Mesh bridge"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Your Name" }]
+
+[tool]
+# Зависимости устанавливаются через requirements.txt во время запуска контейнера
+
+
+
