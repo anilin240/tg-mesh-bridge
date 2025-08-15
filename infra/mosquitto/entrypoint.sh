@@ -2,8 +2,8 @@
 set -e
 
 # Env with defaults
-: "${MQTT_USER:=bridge}"
-: "${MQTT_PASS:=bridge}"
+: "${MQTT_USER:=your_mqtt_username}"
+: "${MQTT_PASS:=your_mqtt_password}"
 
 PASS_FILE="/mosquitto/config/passwords"
 ACL_FILE="/mosquitto/config/acl"
@@ -26,9 +26,11 @@ else
     fi
 fi
 
-# Create default ACL if missing (authenticated users get R/W to msh/#). If present, keep as-is.
+# Create default ACL if missing (authenticated users get specific permissions)
 if [ ! -s "$ACL_FILE" ]; then
-    printf "topic readwrite msh/#\n" > "$ACL_FILE"
+    printf "user %s\n" "$MQTT_USER" > "$ACL_FILE"
+    printf "topic read msh/US/2/json/#\n" >> "$ACL_FILE"
+    printf "topic write msh/US/2/json/mqtt/\n" >> "$ACL_FILE"
 fi
 
 # Fix permissions so mosquitto can read them

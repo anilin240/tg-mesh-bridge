@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-HOST=${1:-127.0.0.1}; PORT=${2:-1883}; USER=${3:-bridge}; PASS=${4:-bridge}
+HOST=${1:-127.0.0.1}; PORT=${2:-1883}; USER=${3:-your_mqtt_username}; PASS=${4:-your_mqtt_password}
 echo "[*] Checking port ${PORT} ..."
 sudo ss -lntp | grep ":${PORT}" || echo "No listener on ${PORT}"
 echo "[*] Broker logs (docker) ..."

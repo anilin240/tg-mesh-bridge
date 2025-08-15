@@ -33,7 +33,7 @@ def _get_recent_nodes_for_gateway(gateway_node_id: int, limit: int = 20) -> list
         n = aliased(Node)
         fifteen_minutes_ago = func.now() - text("interval '15 minutes'")
         stmt = (
-            select(HeardMap.node_id, n.alias, HeardMap.last_heard_at)
+            select(HeardMap.node_id, n.user_label, n.alias, HeardMap.last_heard_at)
             .join(n, n.node_id == HeardMap.node_id, isouter=True)
             .where(
                 HeardMap.gateway_node_id == gateway_node_id,
@@ -43,7 +43,12 @@ def _get_recent_nodes_for_gateway(gateway_node_id: int, limit: int = 20) -> list
             .limit(limit)
         )
         rows = session.execute(stmt).all()
-        return [(int(node_id), alias, last_heard_at) for node_id, alias, last_heard_at in rows]
+        # Приоритет: user_label → alias → node_id
+        result = []
+        for node_id, user_label, alias, last_heard_at in rows:
+            display_name = user_label or alias or str(node_id)
+            result.append((int(node_id), display_name, last_heard_at))
+        return result
 
 
 @nearby_router.message(Command("nearby"))
@@ -94,15 +99,14 @@ async def handle_nearby(message: types.Message) -> None:
             u = session.get(User, message.from_user.id)
             lang = (u.language if u else "en") or "en"
         lines: list[str] = [_t(lang, "nearby_header", gateway=gateway_node_id)]
-        for node_id, alias, last_heard_at in rows:
+        for node_id, display_name, last_heard_at in rows:
             # Compute minutes ago, clamp to >=0
             diff_minutes = max(0, int(math.floor((now_utc - last_heard_at).total_seconds() / 60)))
-            alias_text = f" {alias}" if alias else ""
-            lines.append(f" • {node_id}{alias_text} — {_t(lang, 'min_ago', minutes=diff_minutes)}")
+            lines.append(f" • {display_name} — {_t(lang, 'min_ago', minutes=diff_minutes)}")
 
         await message.answer("\n".join(lines))
     except Exception as e:
         logger.error("/nearby handler error: {}", e)
-        await message.answer("Failed to fetch nearby nodes.")
+        await message.answer(_t(lang, "error.nearby_fetch"))
 
 

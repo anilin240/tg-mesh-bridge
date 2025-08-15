@@ -5,6 +5,7 @@ import re
 from typing import Any, Optional
 
 from loguru import logger
+from sqlalchemy import select
 
 try:
     if "/app/src" not in sys.path:
@@ -25,14 +26,95 @@ from bridge.repo import (
     link_node_to_user,
     update_node_alias,
     update_node_position,
+    get_device_by_id_for_user,
 )
 
-from aiogram import Bot
+# Bot импорт удалён - используется из state
 
 import paho.mqtt.client as mqtt
 
 
 SUBSCRIBE_TOPIC = None  # will be resolved from AppConfig at runtime
+
+
+def get_node_display_name(node_id: int) -> str:
+    """Получить красивое имя ноды с приоритетом: user_label → alias → node_id"""
+    try:
+        # Пытаемся найти ноду в базе данных
+        from common.db import SessionLocal
+        from common.models import Node
+        
+        with SessionLocal() as session:
+            node = session.execute(
+                select(Node).where(Node.node_id == node_id)
+            ).scalar_one_or_none()
+            
+            if node:
+                # Приоритет: user_label → alias → node_id
+                if node.user_label:
+                    return node.user_label
+                elif node.alias:
+                    return node.alias
+                else:
+                    return str(node.node_id)
+            else:
+                return str(node_id)
+    except Exception as e:
+        logger.warning("Error getting node display name for {}: {}", node_id, e)
+        return str(node_id)
+
+
+def _send_telegram_message(chat_id: int, text: str, link_performed: bool = False, mesh_from: Optional[int] = None, tg_user_id: Optional[int] = None, gateway_node_id: Optional[int] = None) -> None:
+    """Отправить сообщение в Telegram через event loop"""
+    from common.state import state
+    bot = state.bot
+    loop = state.loop
+    
+    if not bot or not loop:
+        logger.error("Bot/loop not initialized in state - cannot send message")
+        return
+    
+    import asyncio
+    async def _send():
+        try:
+            if link_performed:
+                try:
+                    from common.i18n import t
+                    # Определяем язык пользователя (по умолчанию английский)
+                    lang = "en"  # Можно улучшить, получая язык из базы данных
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text=t(lang, "system.node_linked", node_id=mesh_from),
+                    )
+                    logger.info("Link confirmation sent successfully")
+                    try:
+                        save_message(
+                            direction="system",
+                            msg_id=None,
+                            from_id=str(mesh_from) if mesh_from is not None else None,
+                            to_id=str(tg_user_id),
+                            gateway_node_id=gateway_node_id,
+                            payload="link_ok",
+                        )
+                    except Exception:
+                        pass
+                except Exception:
+                    logger.warning("Failed to send link confirmation DM")
+            
+            await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
+            logger.info("MESH→TG SENT: chat_id={}, text='{}'", chat_id, text)
+        except Exception as e:
+            logger.error("MESH→TG ERROR: chat_id={}, text='{}', error={}", chat_id, text, e)
+    
+    # Планируем отправку через event loop
+    future = asyncio.run_coroutine_threadsafe(_send(), loop)
+    try:
+        # Ждём результат с таймаутом
+        future.result(timeout=30.0)
+    except asyncio.TimeoutError:
+        logger.error("MESH→TG TIMEOUT: chat_id={}, text='{}' (30s)", chat_id, text)
+    except Exception as e:
+        logger.error("MESH→TG THREAD ERROR: chat_id={}, text='{}', error={}", chat_id, text, e)
 
 
 def _on_connect(client: mqtt.Client, userdata: Any, flags: dict, reason_code: int, properties=None) -> None:
@@ -161,48 +243,25 @@ def _on_message(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> No
             except Exception as e:
                 logger.error("Link node to user error: {}", e)
 
-            text_to_send = f"[from {mesh_from}] {message_text or ''}".strip()
+            # Получаем красивое имя ноды
+            display_name = get_node_display_name(int(mesh_from)) if mesh_from is not None else str(mesh_from)
+            # Новый формат: @никнейм: сообщение (с HTML-разметкой для выделения)
+            text_to_send = f"<b>@{display_name}</b>: {message_text or ''}".strip()
+
+            # Подробное логирование для отладки
+            logger.info("MESH→TG: node_id={}, display_name='{}', chat_id={}, text='{}'", 
+                       mesh_from, display_name, tg_chat_id or tg_user_id, text_to_send)
 
             # Send DM via Telegram Bot
-            try:
-                config = AppConfig()
-                from common.state import state
-                bot = state.bot
-                loop = state.loop
-                if bot and loop:
-                    import asyncio
-                    async def _send():
-                        logger.info("Attempting to send message to chat_id: {}", tg_chat_id or tg_user_id)
-                        if link_performed:
-                            try:
-                                await bot.send_message(
-                                    chat_id=int(tg_chat_id or tg_user_id),
-                                    text=f"Node {mesh_from} has been linked to your account.",
-                                )
-                                logger.info("Link confirmation sent successfully")
-                                try:
-                                    save_message(
-                                        direction="system",
-                                        msg_id=None,
-                                        from_id=str(mesh_from) if mesh_from is not None else None,
-                                        to_id=str(tg_user_id),
-                                        gateway_node_id=gateway_node_id,
-                                        payload="link_ok",
-                                    )
-                                except Exception:
-                                    pass
-                            except Exception:
-                                logger.warning("Failed to send link confirmation DM")
-                        try:
-                            await bot.send_message(chat_id=int(tg_chat_id or tg_user_id), text=text_to_send)
-                            logger.info("Message sent successfully to Telegram")
-                        except Exception as e:
-                            logger.error("Failed to send message to Telegram: {}", e)
-                    asyncio.run_coroutine_threadsafe(_send(), loop)
-                else:
-                    logger.error("Bot/loop not initialized")
-            except Exception as e:
-                logger.error("Failed to send DM: {}", e)
+            logger.info("Attempting to send message to chat_id: {}", tg_chat_id or tg_user_id)
+            _send_telegram_message(
+                chat_id=int(tg_chat_id or tg_user_id),
+                text=text_to_send,
+                link_performed=link_performed,
+                mesh_from=mesh_from,
+                tg_user_id=tg_user_id,
+                gateway_node_id=gateway_node_id
+            )
 
             # Save message after sending (or attempting to)
             try:
@@ -277,103 +336,7 @@ def _on_message(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> No
         except Exception as e:
             logger.error("DB upsert error: {}", e)
 
-        # Deduplication by (direction, msg_id)
-        if message_exists("mesh2tg", msg_id):
-            logger.info("Duplicate message skipped: {}", msg_id)
-            return
-
-        # Anti-loop: ignore messages originating from this bot prefix
-        if isinstance(payload_str, str) and payload_str.startswith("[[TG]] "):
-            return
-
-        # Only process text payloads
-        if not isinstance(payload_str, str):
-            return
-
-        code, message_text = _extract_code_and_message(payload_str)
-        if not code:
-            return
-
-        tg_user_id = None
-        try:
-            tg_user_id = get_user_tg_id_by_code(code)
-        except Exception as e:
-            logger.error("DB query error (get user by code): {}", e)
-            return
-
-        if not tg_user_id:
-            logger.warning("CODE not found: {}", code)
-            # anyway save message record for audit
-            try:
-                save_message(
-                    direction="mesh2tg",
-                    msg_id=msg_id,
-                    from_id=str(mesh_from) if mesh_from is not None else None,
-                    to_id=None,
-                    gateway_node_id=int(mesh_sender) if mesh_sender is not None else None,
-                    payload=payload_str,
-                )
-            except Exception as e:
-                logger.error("Save message error: {}", e)
-            return
-
-        # Attempt to link node to user if not linked yet
-        link_performed = False
-        try:
-            if mesh_from is not None and tg_user_id is not None:
-                link_performed = link_node_to_user(int(mesh_from), int(tg_user_id))
-        except Exception as e:
-            logger.error("Link node to user error: {}", e)
-
-        text_to_send = f"[from {mesh_from}] {message_text or ''}".strip()
-
-        # Send DM via Telegram Bot
-        try:
-            config = AppConfig()
-            from common.state import state
-            bot = state.bot
-            loop = state.loop
-            if bot and loop:
-                import asyncio
-                async def _send():
-                    if link_performed:
-                        try:
-                            await bot.send_message(
-                                chat_id=int(tg_chat_id or tg_user_id),
-                                text=f"Node {mesh_from} has been linked to your account.",
-                            )
-                            try:
-                                save_message(
-                                    direction="system",
-                                    msg_id=None,
-                                    from_id=str(mesh_from) if mesh_from is not None else None,
-                                    to_id=str(tg_user_id),
-                                    gateway_node_id=gateway_node_id,
-                                    payload="link_ok",
-                                )
-                            except Exception:
-                                pass
-                        except Exception:
-                            logger.warning("Failed to send link confirmation DM")
-                    await bot.send_message(chat_id=int(tg_chat_id or tg_user_id), text=text_to_send)
-                asyncio.run_coroutine_threadsafe(_send(), loop)
-            else:
-                logger.error("Bot/loop not initialized")
-        except Exception as e:
-            logger.error("Failed to send DM: {}", e)
-
-        # Save message after sending (or attempting to)
-        try:
-            save_message(
-                direction="mesh2tg",
-                msg_id=str(msg_id),
-                from_id=str(mesh_from) if mesh_from is not None else None,
-                to_id=str(tg_user_id) if tg_user_id is not None else None,
-                gateway_node_id=gateway_node_id,
-                payload=payload_str,
-            )
-        except Exception as e:
-            logger.error("Save message error: {}", e)
+        # Дублирующий код удалён - обработка уже выполнена выше
     except json.JSONDecodeError:
         logger.warning("MQTT non-JSON payload on {}: {}", msg.topic, payload_text)
 

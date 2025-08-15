@@ -49,7 +49,7 @@ def run_migrations_offline() -> None:
     """
     # Build URL from env vars (provided to the container)
     user = os.environ.get("POSTGRES_USER", "tgmesh")
-    password = os.environ.get("POSTGRES_PASSWORD", "changeme")
+    password = os.environ.get("POSTGRES_PASSWORD", "your_postgres_password")
     host = os.environ.get("POSTGRES_HOST", "postgres")
     port = os.environ.get("POSTGRES_PORT", "5432")
     db = os.environ.get("POSTGRES_DB", "tgmesh")
@@ -75,7 +75,7 @@ def run_migrations_online() -> None:
     # Build URL from env vars and pass to engine config
     section = config.get_section(config.config_ini_section, {})
     user = os.environ.get("POSTGRES_USER", "tgmesh")
-    password = os.environ.get("POSTGRES_PASSWORD", "changeme")
+    password = os.environ.get("POSTGRES_PASSWORD", "your_postgres_password")
     host = os.environ.get("POSTGRES_HOST", "postgres")
     port = os.environ.get("POSTGRES_PORT", "5432")
     db = os.environ.get("POSTGRES_DB", "tgmesh")

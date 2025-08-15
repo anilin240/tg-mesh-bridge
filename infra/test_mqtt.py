@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 # MQTT настройки
-MQTT_HOST = "192.168.50.81"
+MQTT_HOST = "your_mqtt_host_ip"
 MQTT_PORT = 1883
 MQTT_USER = "bridge"
 MQTT_PASS = "bridge"

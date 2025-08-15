@@ -3,7 +3,7 @@ set -e
 TS=$(date +%F_%H%M%S)
 OUT=~/tg-mesh-logs-$TS
 mkdir -p "$OUT"
-cd ~/tg-mesh-bridge/infra
+cd ~/your_project_path/infra
 
 docker compose ps > "$OUT/compose-ps.txt"
 docker compose config > "$OUT/compose-config.yaml"

@@ -4,7 +4,7 @@ import sys
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from bot.keyboards.menu import top_menu, messages_menu, dev_menu, network_menu
+from bot.keyboards.menu import top_menu, code_menu, dev_menu
 from loguru import logger
 
 try:
@@ -22,9 +22,10 @@ from bot.handlers.nearby import nearby_router
 from bot.handlers.send_to_node import send_to_node_router
 from bot.handlers.send_nearby import send_nearby_router
 from bot.handlers.status import status_router
-from bot.handlers.help import help_router
+# Удалён импорт help_router - файл удалён
 from bot.handlers.menu import menu_router
-from bot.handlers.devices import dev_router
+
+from bot.handlers.fallback import fallback_router
 from common.i18n import get as _t
 from bridge.mqtt import publish_to_topic
 
@@ -67,27 +68,18 @@ async def main() -> None:
     dp.message.middleware(RL2())
     dp.callback_query.middleware(RL2())
 
-    # Routers
+    # Routers (в порядке приоритета)
     dp.include_router(nearby_router)
     dp.include_router(send_to_node_router)
     dp.include_router(send_nearby_router)
     dp.include_router(status_router)
     dp.include_router(menu_router)
-    dp.include_router(dev_router)
-    # help is handled locally below with menu
+
+    dp.include_router(fallback_router)  # Низкий приоритет - обработчик неизвестных сообщений
+    # Удалена регистрация help_router - файл удалён
 
     def _main_menu(lang: str) -> InlineKeyboardMarkup:
         return top_menu(lang)
-
-    @dp.message(Command("start"))
-    async def handle_start(message: types.Message) -> None:
-        from bot.services.users import get_or_create_user
-        # Save chat id immediately
-        get_or_create_user(message.from_user.id, message.chat.id)
-        kb_lang = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="RU", callback_data="setlang:ru"), InlineKeyboardButton(text="EN", callback_data="setlang:en")]
-        ])
-        await message.answer(_t("en", "start_welcome"), reply_markup=kb_lang)
 
     @dp.callback_query(lambda c: c.data and c.data.startswith("setlang:"))
     async def handle_set_language(callback: types.CallbackQuery) -> None:
@@ -111,7 +103,7 @@ async def main() -> None:
 
     @dp.message(Command("ping"))
     async def handle_ping(message: types.Message) -> None:
-        await message.answer("pong")
+        await message.answer(_t("en", "system.pong"))
 
     @dp.message(Command("probe"))
     async def handle_probe(message: types.Message) -> None:
@@ -125,17 +117,7 @@ async def main() -> None:
             from common.config import AppConfig
             topic = AppConfig().mqtt_topic_pub
         ok = publish_to_topic(topic, {"ping": "probe", "ts": __import__("time").time()})
-        await message.answer("probe sent" if ok else "probe failed")
-
-    @dp.message(Command("help"))
-    async def handle_help(message: types.Message) -> None:
-        # detect language
-        from common.db import SessionLocal
-        from common.models import User
-        with SessionLocal() as session:
-            u = session.get(User, message.from_user.id)
-            lang = (u.language if u else "en") or "en"
-        await message.answer(_t(lang, "help.body"), reply_markup=_main_menu(lang))
+        await message.answer(_t("en", "system.probe_sent" if ok else "system.probe_failed"))
 
     @dp.message(Command("link"))
     async def handle_link(message: types.Message) -> None:
@@ -148,8 +130,7 @@ async def main() -> None:
             from sqlalchemy import select
             with SessionLocal() as session:
                 u = session.get(User, message.from_user.id)
-                if u and u.language:
-                    lang = u.language
+                lang = (u.language if u else "en") or "en"
             text = _t(lang, "link_new", code=new_code)
             await message.answer(text)
             return
@@ -177,39 +158,23 @@ async def main() -> None:
         text = _t(lang, "link_code", code=code_value)
         await message.answer(text, reply_markup=_main_menu(lang))
 
-    async def handle_nearby_button(message: types.Message) -> None:
-        """Обработка кнопки 'Показать окружение'"""
-        from common.db import SessionLocal
-        from common.models import User
-        with SessionLocal() as session:
-            u = session.get(User, message.from_user.id)
-            lang = (u.language if u else "en") or "en"
+    @dp.message(Command("start"))
+    async def handle_start(message: types.Message) -> None:
+        from loguru import logger
+        logger.info("START: User {} sent /start command", message.from_user.id)
+        logger.info("START: Message text: '{}'", message.text)
+        logger.info("START: Chat ID: {}, User ID: {}", message.chat.id, message.from_user.id)
         
-        # Получаем последний активный шлюз
-        from bot.handlers.nearby import _get_latest_gateway_node_id, _get_recent_nodes_for_gateway
-        import math
-        from datetime import datetime, timezone
-        
-        gateway_node_id = _get_latest_gateway_node_id()
-        if gateway_node_id is None:
-            await message.answer(_t(lang, "no_gateways"), reply_markup=_main_menu(lang))
-            return
+        try:
+            # Показываем меню выбора языка
+            from bot.keyboards.menu import language_menu
+            await message.answer("Выберите язык / Choose language:", reply_markup=language_menu())
+            logger.info("START: Successfully sent language menu to user {}", message.from_user.id)
+        except Exception as e:
+            logger.error("START: Error sending language menu to user {}: {}", message.from_user.id, e)
+            # Fallback - отправляем простое сообщение
+            await message.answer("Привет! / Hello!")
 
-        rows = _get_recent_nodes_for_gateway(gateway_node_id)
-        if not rows:
-            header = _t(lang, "nearby_header", gateway=gateway_node_id)
-            await message.answer(f"{header}\n{_t(lang, 'nearby_none')}", reply_markup=_main_menu(lang))
-            return
-
-        now_utc = datetime.now(timezone.utc)
-        lines: list[str] = [_t(lang, "nearby_header", gateway=gateway_node_id)]
-        for node_id, alias, last_heard_at in rows:
-            # Compute minutes ago, clamp to >=0
-            diff_minutes = max(0, int(math.floor((now_utc - last_heard_at).total_seconds() / 60)))
-            alias_text = f" {alias}" if alias else ""
-            lines.append(f"• {node_id}{alias_text} ({_t(lang, 'min_ago', minutes=diff_minutes)})")
-
-        await message.answer("\n".join(lines), reply_markup=_main_menu(lang))
 
     # Text message handler for code registration and state management
     @dp.message()
@@ -232,13 +197,78 @@ async def main() -> None:
                 # Получаем новый код для отображения
                 user = get_or_create_user(message.from_user.id, message.chat.id)
                 new_code = user.tg_code or ""
-                await message.answer(_t(lang, key, code=new_code), reply_markup=_main_menu(lang))
+                await message.answer(_t(lang, key, code=new_code), reply_markup=code_menu(lang))
             else:
-                await message.answer(_t(lang, key), reply_markup=_main_menu(lang))
+                await message.answer(_t(lang, key), reply_markup=code_menu(lang))
             
             # Очищаем состояние
             state_manager.clear_state(message.from_user.id)
             return
+        
+        elif state_manager.is_in_state(message.from_user.id, UserState.REGISTERING):
+            # Пользователь в процессе работы с устройствами
+            session = state_manager.get_session(message.from_user.id)
+            data = session.data or {}
+            action = data.get("action")
+            node_id = data.get("node_id")
+            
+            if action == "add":
+                # Обработка добавления устройства
+                logger.info("DEV ADD: Parsing node_id input '{}' for user {}", txt, message.from_user.id)
+                try:
+                    node_id = int(txt, 0)  # поддержка '123456' и '0x1A2B'
+                    logger.info("DEV ADD: Parse OK: node_id={} for user {}", node_id, message.from_user.id)
+                except Exception as e:
+                    logger.warning("DEV ADD: Parse ERROR: '{}' for user {} - {}", txt, message.from_user.id, str(e))
+                    from bot.keyboards.menu import back_to_dev_menu
+                    await message.answer(_t(lang, "dev.invalid_node_id"), reply_markup=back_to_dev_menu(lang))
+                    return
+                
+                from bridge.repo import link_node_to_user_manual
+                logger.info("DEV ADD: Calling link_node_to_user_manual(node_id={}, tg_user_id={})", node_id, message.from_user.id)
+                res = link_node_to_user_manual(node_id=node_id, tg_user_id=message.from_user.id)
+                logger.info("DEV ADD: link_node_to_user_manual result: '{}' for user {}", res, message.from_user.id)
+                
+                if res == "ok":
+                    await message.answer(_t(lang, "dev.add_ok", node_id=node_id), reply_markup=dev_menu(lang))
+                elif res == "already":
+                    await message.answer(_t(lang, "dev.add_already"), reply_markup=dev_menu(lang))
+                elif res == "owned_by_other":
+                    await message.answer(_t(lang, "dev.add_owned_by_other"), reply_markup=dev_menu(lang))
+                else:  # 'limit'
+                    await message.answer(_t(lang, "dev.limit"), reply_markup=dev_menu(lang))
+                
+                logger.info("DEV ADD: Clearing state for user {}", message.from_user.id)
+                state_manager.clear_state(message.from_user.id)
+                return
+            
+            elif action == "write" and node_id:
+                # Обработка ввода текста для отправки на устройство
+                from bridge.mqtt import publish_downlink
+                payload = {"to": node_id, "type": "sendtext", "payload": f"[[TG]] {txt}"}
+                ok = publish_downlink(payload)
+                if ok:
+                    await message.answer(_t(lang, "dev.sent"), reply_markup=dev_menu(lang))
+                else:
+                    await message.answer(_t(lang, "error.mqtt"), reply_markup=dev_menu(lang))
+                state_manager.clear_state(message.from_user.id)
+                return
+            
+            elif action == "rename" and node_id:
+                # Обработка ввода метки для переименования устройства
+                from bridge.repo import rename_user_device
+                label = txt.strip()[:64]
+                if rename_user_device(node_id, message.from_user.id, label):
+                    await message.answer(_t(lang, "dev.renamed", node_id=node_id, label=label), reply_markup=dev_menu(lang))
+                else:
+                    await message.answer(_t(lang, "error.general"), reply_markup=dev_menu(lang))
+                state_manager.clear_state(message.from_user.id)
+                return
+            
+            else:
+                # Неизвестное действие - очищаем состояние
+                state_manager.clear_state(message.from_user.id)
+                return
         
         # Проверяем, не является ли сообщение кодом для регистрации
         # Код должен быть 4-8 символов, только буквы и цифры
@@ -251,6 +281,8 @@ async def main() -> None:
             else:
                 await message.answer(_t(lang, key), reply_markup=_main_menu(lang))
             return
+
+    # Обработчик неизвестных сообщений перенесён в fallback_router
 
     # Run MQTT consumer in a parallel task
     loop = asyncio.get_running_loop()

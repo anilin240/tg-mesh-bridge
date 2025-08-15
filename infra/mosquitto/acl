@@ -1,4 +1,4 @@
-user bridge
+user your_mqtt_username
 topic readwrite msh/#
 
 

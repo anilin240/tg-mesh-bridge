@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 HOST=${1:-127.0.0.1}
-USER=${2:-bridge}
-PASS=${3:-bridge}
+USER=${2:-your_mqtt_username}
+PASS=${3:-your_mqtt_password}
 SUBTOPIC=${4:-'msh/#'}
 PUBTOPIC=${5:-'msh/US/2/json/test'}
 MSG='{"ping":"selftest"}'

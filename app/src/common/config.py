@@ -6,7 +6,7 @@ class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(env_file="/app/.env", env_file_encoding="utf-8", extra="ignore")
 
     # MQTT
-    mqtt_host: str = Field(default="192.168.50.81")
+    mqtt_host: str = Field(default="your_mqtt_host_ip")
     mqtt_port: int = Field(default=1883)
     mqtt_user: str | None = None
     mqtt_pass: str | None = None
@@ -16,7 +16,7 @@ class AppConfig(BaseSettings):
     # Postgres
     postgres_db: str = Field(default="tgmesh")
     postgres_user: str = Field(default="tgmesh")
-    postgres_password: str = Field(default="changeme")
+    postgres_password: str = Field(default="your_postgres_password")
     postgres_host: str = Field(default="postgres")
     postgres_port: int = Field(default=5432)
 

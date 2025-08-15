@@ -60,9 +60,9 @@ EN: dict[str, str] = {
     
     # Новые ключи для улучшенного интерфейса
     "menu.top": "Выберите действие:",
-    "menu.messages": "📨 Получение сообщений",
+    "menu.code": "📨 TG-код",
     "menu.devices": "📱 Мои устройства",
-    "menu.network": "🌐 Сеть рядом",
+    "menu.nearby": "🌐 Рядом",
     "menu.help": "❓ Помощь",
 
     "messages.title": "📨 **Получение сообщений**\n\nНастройте получение сообщений из MeshTastic в ваш Telegram. Выберите действие:",
@@ -97,8 +97,15 @@ EN: dict[str, str] = {
     "dev.action.write": "✍️ Написать",
     "dev.action.rename": "✏️ Переименовать",
     "dev.action.delete": "🗑️ Удалить",
-    "dev.enter_message": "Введите текст для <b>{label}</b> (ID: {node_id}):",
-    "dev.sent": "Message sent to MeshTastic.",
+            "dev.enter_message": "Введите текст для <b>{label}</b> (ID: {node_id}):",
+        "dev.sent": "Сообщение отправлено на устройство.",
+                "dev.edit_device": "Устройство: <b>{label}</b> (ID: {node_id})",
+        
+        # Системные сообщения
+        "system.node_linked": "Нода {node_id} привязана к вашему аккаунту.",
+        
+        # Обработчик неизвестных сообщений
+        "unknown_message": "Используйте меню ниже для навигации:",
 
     "nearby.title": "Nodes heard at the selected gateway (15 min):",
     "nearby.refresh": "Refresh",
@@ -129,6 +136,16 @@ EN: dict[str, str] = {
     "register_node_ok": "Node {node_id} registered to your account{alias_part}.",
     "register_node_taken": "Alias is already taken. Choose another one.",
     "register_node_invalid": "Invalid node_id. Use integer.",
+    
+    # Errors and system messages
+    "error.unknown_command": "Unknown command",
+    "error.menu_update": "Menu update error",
+    "error.general": "Error",
+    "error.mqtt": "MQTT error",
+    "error.nearby_fetch": "Failed to fetch nearby nodes",
+    "system.pong": "pong",
+    "system.probe_sent": "probe sent",
+    "system.probe_failed": "probe failed",
 }
 
 
@@ -206,12 +223,23 @@ RU: dict[str, str] = {
     "register_node_taken": "Имя (alias) уже занято. Выберите другое.",
     "register_node_invalid": "Некорректный node_id. Нужен целое число.",
     
+    # Ошибки и системные сообщения
+    "error.unknown_command": "Неизвестная команда",
+    "error.menu_update": "Ошибка обновления меню",
+    "error.general": "Ошибка",
+    "error.mqtt": "Ошибка MQTT",
+    "error.nearby_fetch": "Не удалось получить список нод",
+    "system.pong": "pong",
+    "system.probe_sent": "probe sent",
+    "system.probe_failed": "probe failed",
+    
     # Новые ключи для улучшенного интерфейса
     "menu.top": "Выберите действие:",
     "menu.code": "TG‑код",
     "menu.devices": "Мои ноды",
     "menu.nearby": "Рядом",
     "menu.help": "Помощь",
+    "menu.back": "🔙 Назад",
 
     "code.title": "TG‑код — это метка для доставки сообщений из MeshTastic в ваш Telegram.\nВыберите действие:",
     "code.show": "Показать код",
@@ -247,6 +275,10 @@ RU: dict[str, str] = {
     "dev.action.delete": "Удалить",
     "dev.enter_message": "Введите текст для <b>{label}</b> (ID: {node_id}):",
     "dev.sent": "Сообщение отправлено в MeshTastic.",
+    "dev.invalid_node_id": "❌ Неверный формат Node ID. Используйте число (например: 123456) или hex (например: 0x1A2B).",
+    
+    # Обработчик неизвестных сообщений
+    "unknown_message": "Используйте меню ниже для навигации:",
 
     "nearby.title": "Узлы, слышимые у выбранного шлюза за 15 минут:",
     "nearby.refresh": "Обновить",
@@ -301,6 +333,7 @@ messages: dict[str, Mapping[str, str]] = {
         "menu.devices": "My Nodes",
         "menu.nearby": "Nearby",
         "menu.help": "Help",
+        "menu.back": "🔙 Back",
         "code.title": "TG Code routes MeshTastic messages to your Telegram. Choose:",
         "code.show": "Show code",
         "code.change": "New random",
@@ -318,6 +351,7 @@ messages: dict[str, Mapping[str, str]] = {
         "dev.none": "No devices yet.",
         "dev.limit": "Limit reached: 3 devices per account.",
         "dev.enter_node_id": "Send device <b>Node ID</b> (int/hex):",
+        "dev.invalid_node_id": "❌ Invalid Node ID format. Use number (e.g., 123456) or hex (e.g., 0x1A2B).",
         "dev.add_ok": "Device added: <b>{node_id}</b>",
         "dev.add_already": "This device is already linked to you.",
         "dev.add_owned_by_other": "This device is linked to another user.",
@@ -334,6 +368,13 @@ messages: dict[str, Mapping[str, str]] = {
         "dev.action.delete": "Delete",
         "dev.enter_message": "Enter text for <b>{label}</b> (ID: {node_id}):",
         "dev.sent": "Message sent to MeshTastic.",
+        "dev.edit_device": "Device: <b>{label}</b> (ID: {node_id})",
+        
+        # System messages
+        "system.node_linked": "Node {node_id} has been linked to your account.",
+        
+        # Unknown message handler
+        "unknown_message": "Use the menu below for navigation:",
         "nearby.title": "Nodes heard at the selected gateway (15 min):",
         "nearby.refresh": "Refresh",
         "nearby.none": "No fresh data for the selected gateway.",
@@ -379,10 +420,11 @@ messages: dict[str, Mapping[str, str]] = {
         
         # Новые ключи для улучшенного интерфейса
         "menu.top": "Выберите действие:",
-        "menu.messages": "📨 Получение сообщений",
+        "menu.code": "📨 TG-код",
         "menu.devices": "📱 Мои устройства",
-        "menu.network": "🌐 Сеть рядом",
+        "menu.nearby": "🌐 Рядом",
         "menu.help": "❓ Помощь",
+        "menu.back": "🔙 Назад",
         "messages.title": "📨 **Получение сообщений**\n\nНастройте получение сообщений из MeshTastic в ваш Telegram. Выберите действие:",
         "messages.show": "🔑 Показать код",
         "messages.change": "🔄 Сменить код",
@@ -400,6 +442,7 @@ messages: dict[str, Mapping[str, str]] = {
         "dev.none": "У вас пока нет привязанных устройств.",
         "dev.limit": "Достигнут лимит: 3 устройства на аккаунт.",
         "dev.enter_node_id": "Отправьте <b>Node ID</b> устройства (число/hex):",
+        "dev.invalid_node_id": "❌ Неверный формат Node ID. Используйте число (например: 123456) или hex (например: 0x1A2B).",
         "dev.add_ok": "Устройство добавлено: <b>{node_id}</b>",
         "dev.add_already": "Это устройство уже привязано к вам.",
         "dev.add_owned_by_other": "Устройство привязано к другому пользователю.",
@@ -416,6 +459,13 @@ messages: dict[str, Mapping[str, str]] = {
         "dev.action.delete": "🗑️ Удалить",
         "dev.enter_message": "Введите текст для <b>{label}</b> (ID: {node_id}):",
         "dev.sent": "Сообщение отправлено в MeshTastic.",
+        "dev.edit_device": "Устройство: <b>{label}</b> (ID: {node_id})",
+        
+        # Системные сообщения
+        "system.node_linked": "Node {node_id} has been linked to your account.",
+        
+        # Обработчик неизвестных сообщений
+        "unknown_message": "Используйте меню ниже для навигации:",
         "nearby.title": "Узлы, слышимые у выбранного шлюза за 15 минут:",
         "nearby.refresh": "Обновить",
         "nearby.none": "Нет свежих данных по выбранному шлюзу.",

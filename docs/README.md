@@ -25,7 +25,7 @@ make test
 MQTT Проверка подписчика:
 ```
 cd infra
-docker compose exec mosquitto sh -lc "mosquitto_pub -h 192.168.50.81 -p 1883 -u bridge -P bridge -t 'msh/US/2/json/test/123' -m '{\"from\":111,\"sender\":9001,\"payload\":\"hello\"}'"
+docker compose exec mosquitto sh -lc "mosquitto_pub -h your_mqtt_host_ip -p 1883 -u your_mqtt_username -P your_mqtt_password -t 'msh/US/2/json/test/123' -m '{\"from\":111,\"sender\":9001,\"payload\":\"hello\"}'"
 ```
 
 Команды бота:
@@ -41,7 +41,7 @@ docker compose exec mosquitto sh -lc "mosquitto_pub -h 192.168.50.81 -p 1883 -u 
 2. Опубликуйте JSON через MQTT, где payload содержит `@tg:<CODE> <text>`:
 ```
 cd infra
-docker compose exec mosquitto sh -lc "mosquitto_pub -h 192.168.50.81 -p 1883 -u bridge -P bridge -t 'msh/US/2/json/test/321' -m '{\"from\":1987123456,\"sender\":2130123456,\"payload\":\"@tg:YOURCODE hello from mesh\",\"id\":\"test-321\"}'"
+docker compose exec mosquitto sh -lc "mosquitto_pub -h your_mqtt_host_ip -p 1883 -u your_mqtt_username -P your_mqtt_password -t 'msh/US/2/json/test/321' -m '{\"from\":123456,\"sender\":789012,\"payload\":\"@tg:YOURCODE hello from mesh\",\"id\":\"test-321\"}'"
 ```
 3. Ожидается DM в Telegram и записи в таблицах `nodes`, `gateways`, `heard_map`, `messages`.
 
