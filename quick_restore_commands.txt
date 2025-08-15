@@ -1,0 +1,87 @@
+# Quick Restore Commands for Personal Data
+# Run these commands in the project root to restore your personal configuration
+
+## SEARCH AND REPLACE COMMANDS
+
+### For Windows (PowerShell/CMD):
+```cmd
+# MQTT Host
+findstr /s /i "your_mqtt_host_ip" *.*
+powershell -Command "(Get-Content -Path 'infra/docker-compose.yml' -Raw) -replace 'your_mqtt_host_ip', '192.168.50.81' | Set-Content -Path 'infra/docker-compose.yml'"
+powershell -Command "(Get-Content -Path 'app/src/common/config.py' -Raw) -replace 'your_mqtt_host_ip', '192.168.50.81' | Set-Content -Path 'app/src/common/config.py'"
+
+# MQTT Username
+powershell -Command "(Get-Content -Path 'infra/docker-compose.yml' -Raw) -replace 'your_mqtt_username', 'bridge' | Set-Content -Path 'infra/docker-compose.yml'"
+powershell -Command "(Get-Content -Path 'infra/mosquitto/acl' -Raw) -replace 'your_mqtt_username', 'bridge' | Set-Content -Path 'infra/mosquitto/acl'"
+
+# MQTT Password
+powershell -Command "(Get-Content -Path 'infra/docker-compose.yml' -Raw) -replace 'your_mqtt_password', 'bridge' | Set-Content -Path 'infra/docker-compose.yml'"
+powershell -Command "(Get-Content -Path 'infra/mosquitto/entrypoint.sh' -Raw) -replace 'your_mqtt_password', 'bridge' | Set-Content -Path 'infra/mosquitto/entrypoint.sh'"
+
+# Database Password
+powershell -Command "(Get-Content -Path 'infra/docker-compose.yml' -Raw) -replace 'your_postgres_password', 'changeme' | Set-Content -Path 'infra/docker-compose.yml'"
+powershell -Command "(Get-Content -Path 'app/src/common/config.py' -Raw) -replace 'your_postgres_password', 'changeme' | Set-Content -Path 'app/src/common/config.py'"
+powershell -Command "(Get-Content -Path 'app/alembic/env.py' -Raw) -replace 'your_postgres_password', 'changeme' | Set-Content -Path 'app/alembic/env.py'"
+powershell -Command "(Get-Content -Path 'app/alembic.ini' -Raw) -replace 'your_postgres_password', 'changeme' | Set-Content -Path 'app/alembic.ini'"
+
+# Test Data
+powershell -Command "(Get-Content -Path 'infra/test_mesh_to_tg.py' -Raw) -replace 'EXAMPLE123', 'ABCD1234' | Set-Content -Path 'infra/test_mesh_to_tg.py'"
+powershell -Command "(Get-Content -Path 'infra/test_mesh_to_tg.py' -Raw) -replace 'EXAMPLE456', 'SHPIL' | Set-Content -Path 'infra/test_mesh_to_tg.py'"
+powershell -Command "(Get-Content -Path 'infra/test_mesh_to_tg.py' -Raw) -replace '789012', '2130123456' | Set-Content -Path 'infra/test_mesh_to_tg.py'"
+
+# Project Path
+powershell -Command "(Get-Content -Path 'scripts/collect-logs.sh' -Raw) -replace 'your_project_path', '~/tg-mesh-bridge' | Set-Content -Path 'scripts/collect-logs.sh'"
+```
+
+### For Linux/Mac:
+```bash
+# MQTT Host
+find . -type f -name "*.yml" -o -name "*.py" -o -name "*.sh" | xargs sed -i 's/your_mqtt_host_ip/192.168.50.81/g'
+
+# MQTT Username
+find . -type f -name "*.yml" -o -name "*.py" -o -name "*.sh" | xargs sed -i 's/your_mqtt_username/bridge/g'
+
+# MQTT Password
+find . -type f -name "*.yml" -o -name "*.py" -o -name "*.sh" | xargs sed -i 's/your_mqtt_password/bridge/g'
+
+# Database Password
+find . -type f -name "*.yml" -o -name "*.py" -o -name "*.ini" | xargs sed -i 's/your_postgres_password/changeme/g'
+
+# Test Data
+find . -type f -name "*.py" | xargs sed -i 's/EXAMPLE123/ABCD1234/g'
+find . -type f -name "*.py" | xargs sed -i 's/EXAMPLE456/SHPIL/g'
+find . -type f -name "*.py" | xargs sed -i 's/789012/2130123456/g'
+
+# Project Path
+find . -type f -name "*.sh" | xargs sed -i 's/your_project_path/~\/tg-mesh-bridge/g'
+```
+
+## MANUAL UPDATES
+
+### MQTT Password Hash
+Replace the content of `infra/mosquitto/passwords` with:
+```
+bridge:$7$101$kvCza30UrAY+YC11$wtxjTY4g1IryvwsaI8ukxDwM06RRLATbJU8nGgYZJXuPnTN7iSD3W2IyPR4Qr3PNtyNJeEJb7eGuL20eyv+n7Q==
+```
+
+### MQTT ACL
+Replace the content of `infra/mosquitto/acl` with:
+```
+user bridge
+topic readwrite msh/#
+```
+
+## VERIFICATION
+
+After running the commands, verify that:
+1. `infra/docker-compose.yml` contains `192.168.50.81` and `bridge`
+2. `app/src/common/config.py` contains `192.168.50.81` and `changeme`
+3. `infra/mosquitto/passwords` contains the hashed password
+4. `infra/mosquitto/acl` contains `user bridge`
+
+## USAGE
+
+1. Clone the repository
+2. Run the appropriate commands for your OS
+3. Verify the changes
+4. Start the project with `make up`

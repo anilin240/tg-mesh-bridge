@@ -1,0 +1,69 @@
+# Personal Configuration Data for tg-mesh-bridge
+# Use this file to restore your personal settings when setting up the project
+
+## NETWORK CONFIGURATION
+MQTT_HOST=192.168.50.81
+MQTT_PORT=1883
+
+## MQTT CREDENTIALS
+MQTT_USER=bridge
+MQTT_PASS=bridge
+MQTT_USERNAME=bridge
+MQTT_PASSWORD=bridge123
+
+## DATABASE CREDENTIALS
+POSTGRES_PASSWORD=changeme
+
+## TEST DATA
+# Telegram User ID for testing
+TEST_TELEGRAM_USER_ID=123456789
+
+# Node IDs for testing
+TEST_NODE_ID=123456
+TEST_NODE_ID_1=1987123456
+TEST_NODE_ID_2=2130123456
+
+# Test codes
+TEST_CODE_1=ABCD1234
+TEST_CODE_2=SHPIL
+
+## PROJECT PATHS
+PROJECT_PATH=~/tg-mesh-bridge
+
+## MQTT PASSWORD HASH
+# Original hashed password for Mosquitto
+MQTT_PASSWORD_HASH=bridge:$7$101$kvCza30UrAY+YC11$wtxjTY4g1IryvwsaI8ukxDwM06RRLATbJU8nGgYZJXuPnTN7iSD3W2IyPR4Qr3PNtyNJeEJb7eGuL20eyv+n7Q==
+
+## FILES TO UPDATE
+# Configuration files that need personal data:
+# - infra/docker-compose.yml
+# - app/src/common/config.py
+# - app/alembic/env.py
+# - app/alembic.ini
+# - infra/mosquitto/passwords
+# - infra/mosquitto/acl
+# - infra/mosquitto/entrypoint.sh
+# - test_new_format.py
+# - test_improvements.py
+# - app/test_improvements.py
+# - infra/test_mqtt.py
+# - infra/test_mqtt_auth.py
+# - infra/test_mesh_to_tg.py
+# - scripts/mqtt-selftest.sh
+# - scripts/mqtt-doctor.sh
+# - scripts/collect-logs.sh
+# - docs/README.md
+
+## REPLACEMENT INSTRUCTIONS
+# Replace these placeholders with your actual data:
+# - your_mqtt_host_ip → 192.168.50.81
+# - your_mqtt_username → bridge
+# - your_mqtt_password → bridge
+# - your_postgres_password → changeme
+# - your_project_path → ~/tg-mesh-bridge
+
+## USAGE INSTRUCTIONS
+# 1. Clone the repository
+# 2. Copy this file to the project root
+# 3. Use search and replace to restore your personal data
+# 4. Or give this file to AI assistant to automatically configure the project

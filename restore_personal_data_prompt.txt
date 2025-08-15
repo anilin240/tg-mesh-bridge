@@ -1,0 +1,75 @@
+# PROMPT FOR AI ASSISTANT: Restore Personal Data to tg-mesh-bridge Project
+
+Please restore the following personal data to the tg-mesh-bridge project by replacing all placeholders with the actual values:
+
+## REPLACEMENT MAPPINGS
+
+Replace these placeholders with actual values:
+
+1. **your_mqtt_host_ip** → **192.168.50.81**
+2. **your_mqtt_username** → **bridge**
+3. **your_mqtt_password** → **bridge**
+4. **your_postgres_password** → **changeme**
+5. **your_project_path** → **~/tg-mesh-bridge**
+
+## SPECIFIC REPLACEMENTS
+
+### MQTT Configuration
+- In all files, replace `your_mqtt_host_ip` with `192.168.50.81`
+- Replace `your_mqtt_username` with `bridge`
+- Replace `your_mqtt_password` with `bridge`
+- Replace `bridge123` with `bridge` (in test files)
+
+### Database Configuration
+- Replace `your_postgres_password` with `changeme`
+
+### Test Data
+- Replace `EXAMPLE123` with `ABCD1234`
+- Replace `EXAMPLE456` with `SHPIL`
+- Replace `123456` (with comment "Example node ID") with `123456` (remove comment)
+- Replace `789012` with `2130123456`
+
+### MQTT Password Hash
+- In `infra/mosquitto/passwords`, replace the placeholder with:
+  `bridge:$7$101$kvCza30UrAY+YC11$wtxjTY4g1IryvwsaI8ukxDwM06RRLATbJU8nGgYZJXuPnTN7iSD3W2IyPR4Qr3PNtyNJeEJb7eGuL20eyv+n7Q==`
+
+### MQTT ACL
+- In `infra/mosquitto/acl`, replace `your_mqtt_username` with `bridge`
+
+### Project Paths
+- Replace `your_project_path` with `~/tg-mesh-bridge`
+
+## FILES TO UPDATE
+
+Update these specific files:
+1. `infra/docker-compose.yml`
+2. `app/src/common/config.py`
+3. `app/alembic/env.py`
+4. `app/alembic.ini`
+5. `infra/mosquitto/passwords`
+6. `infra/mosquitto/acl`
+7. `infra/mosquitto/entrypoint.sh`
+8. `test_new_format.py`
+9. `test_improvements.py`
+10. `app/test_improvements.py`
+11. `infra/test_mqtt.py`
+12. `infra/test_mqtt_auth.py`
+13. `infra/test_mesh_to_tg.py`
+14. `scripts/mqtt-selftest.sh`
+15. `scripts/mqtt-doctor.sh`
+16. `scripts/collect-logs.sh`
+17. `docs/README.md`
+
+## INSTRUCTIONS
+
+1. Search for all placeholder values in the project
+2. Replace them with the actual values listed above
+3. Ensure all configuration files are properly updated
+4. Test that the project can start with the restored configuration
+
+## IMPORTANT NOTES
+
+- Keep the Russian interface and technical documentation unchanged
+- Only restore the configuration values, not the documentation text
+- Ensure all environment variables are properly set
+- Verify that MQTT and database connections will work with restored credentials
